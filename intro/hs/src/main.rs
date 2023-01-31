@@ -4,11 +4,10 @@ use std::{
     thread::sleep,
     time::Duration,
 };
-
 use bsc::{temp_sensor::BoardTempSensor, wifi::wifi};
 use embedded_svc::{
     http::{
-        server::{registry::Registry, Response},
+        server::{registry::Registry, Response, ResponseWrite},
         Method,
     },
     io::Write,
@@ -30,24 +29,34 @@ fn main() -> anyhow::Result<()> {
 
     let _wifi = wifi(CONFIG.wifi_ssid, CONFIG.wifi_psk)?;
 
-    let mut temp_sensor = BoardTempSensor::new_taking_peripherals();
+    let server_config = Configuration::default();
+    let mut server = EspHttpServer::new(&server_config)?;
+    server.set_inline_handler("/", Method::Get, |request, response| {
+        let html = index_html();
+        let html_bytes = html.as_bytes();
+        let mut writer = response.into_writer(request)?;
+        writer.do_write_all(html_bytes)?;
+        writer.complete()
+    })?;
 
-    // TODO your code here:
-    // let server_config = ...;
-    // let mut server = EspHttpServer::new(...)?;
+    let temp_sensor_main = Arc::new(Mutex::new(BoardTempSensor::new_taking_peripherals()));
+    let temp_sensor = temp_sensor_main.clone();
 
-    // server.set_inline_handler("/", Method::Get, |request, response| {
-    // TODO your code here:
-    // ...
-    //})?;
+    server.set_inline_handler("/temperature", Method::Get, move |request, response| {
+        let temp_val = temp_sensor.lock().unwrap().read_owning_peripherals();
+        let html = temperature(temp_val);
+        let html_bytes = html.as_bytes();
+        let mut writer = response.into_writer(request)?;
+        writer.do_write_all(html_bytes)?;
+        writer.complete()
+    })?;
 
-    // TODO this is not true until you actually create one
     println!("server awaiting connection");
 
     // prevent program from exiting
     loop {
-        let current_temperature = temp_sensor.read_owning_peripherals();
-        println!("board temperature: {:.2}", current_temperature);
+        let current_temperature = temp_sensor_main.lock().unwrap().read_owning_peripherals();
+        println!("board temperature: {:.2}°C ({:.2}°F)", current_temperature, c_to_f(current_temperature));
         sleep(Duration::from_millis(1000));
     }
 }
@@ -74,6 +83,10 @@ fn index_html() -> String {
     templated("Hello from mcu!")
 }
 
-fn temperature(val: f32) -> String {
-    templated(format!("chip temperature: {:.2}°C", val))
+fn temperature(temp_c: f32) -> String {
+    templated(format!("chip temperature: {:.2}°C ({:.2}°F)", temp_c, c_to_f(temp_c)))
+}
+
+fn c_to_f(temp_c: f32) -> f32 {
+    temp_c*9.0/5.0 + 32.0
 }
