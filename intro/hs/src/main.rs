@@ -40,11 +40,31 @@ fn main() -> anyhow::Result<()> {
     })?;
 
     let temp_sensor_main = Arc::new(Mutex::new(BoardTempSensor::new_taking_peripherals()));
-    let temp_sensor = temp_sensor_main.clone();
 
+    let temp_sensor = temp_sensor_main.clone();
     server.set_inline_handler("/temperature", Method::Get, move |request, response| {
-        let temp_val = temp_sensor.lock().unwrap().read_owning_peripherals();
-        let html = temperature(temp_val);
+        let temp_c = temp_sensor.lock().unwrap().read_owning_peripherals();
+        let html = temperature(temp_c);
+        let html_bytes = html.as_bytes();
+        let mut writer = response.into_writer(request)?;
+        writer.do_write_all(html_bytes)?;
+        writer.complete()
+    })?;
+
+    let temp_sensor = temp_sensor_main.clone();
+    server.set_inline_handler("/temperature_c", Method::Get, move |request, response| {
+        let temp_c = temp_sensor.lock().unwrap().read_owning_peripherals();
+        let html = templated(format!("chip temperature: {:.2}°C", temp_c));
+        let html_bytes = html.as_bytes();
+        let mut writer = response.into_writer(request)?;
+        writer.do_write_all(html_bytes)?;
+        writer.complete()
+    })?;
+
+    let temp_sensor = temp_sensor_main.clone();
+    server.set_inline_handler("/temperature_f", Method::Get, move |request, response| {
+        let temp_c = temp_sensor.lock().unwrap().read_owning_peripherals();
+        let html = templated(format!("chip temperature: {:.2}°F", c_to_f(temp_c)));
         let html_bytes = html.as_bytes();
         let mut writer = response.into_writer(request)?;
         writer.do_write_all(html_bytes)?;
