@@ -20,7 +20,13 @@ use esp_idf_sys as _;
 use log::{error, info};
 
 // imported message topics
-use mqtt_messages::{cmd_topic_fragment, hello_topic, Command, RawCommandData};
+use mqtt_messages::{
+    hello_topic,
+    temperature_data_topic,
+    Command,
+    RawCommandData,
+    cmd_topic_fragment,
+};
 
 const UUID: &'static str = get_uuid::uuid();
 
@@ -70,18 +76,57 @@ fn main() -> anyhow::Result<()> {
     let mqtt_config = MqttClientConfiguration::default();
 
     // Your Code:
-
     // 1. Create a client with default configuration and empty handler
-    // let mut client = EspMqttClient::new( ... )?;
+    let mut client = EspMqttClient::new(
+        broker_url, 
+        &mqtt_config,
+        |_|{}
+    )?;
 
     // 2. publish an empty hello message
-
+    client.publish(
+        hello_topic(UUID),
+        QoS::AtLeastOnce,
+        false,
+        Vec::new(),
+    )?;
 
     loop {
         sleep(Duration::from_secs(1));
         let temp = temp_sensor.read_owning_peripherals();
-
+        let temp_msg = temperature(temp);
         // 3. publish CPU temperature
-        // client.publish( ... )?;
+        client.publish(
+            temperature_data_topic(UUID),
+            QoS::AtLeastOnce,
+            false,
+            temp_msg.chars().map(|c|c as u8).collect::<Vec<u8>>(),
+        )?;
     }
+}
+
+fn templated(content: impl AsRef<str>) -> String {
+    format!(
+        r#"
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>esp-rs web server</title>
+    </head>
+    <body>
+        {}
+    </body>
+</html>
+"#,
+        content.as_ref()
+    )
+}
+
+fn index_html() -> String {
+    templated("Hello from mcu!")
+}
+
+fn temperature(val: f32) -> String {
+    templated(format!("chip temperature: {:.2}°C", val))
 }

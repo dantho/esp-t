@@ -65,6 +65,7 @@ impl ColorData {
         }
     }
 }
+
 #[derive(Debug)]
 pub struct RawCommandData<'a> {
     pub path: &'a str,
