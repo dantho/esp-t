@@ -73,6 +73,11 @@ fn main() -> anyhow::Result<()> {
         format!("mqtt://{}", app_config.mqtt_host)
     };
 
+    dbg!(&broker_url);
+    dbg!(&broker_url);
+    dbg!(&broker_url);
+    dbg!(&broker_url);
+    
     let mqtt_config = MqttClientConfiguration::default();
 
     // Your Code:
@@ -80,53 +85,35 @@ fn main() -> anyhow::Result<()> {
     let mut client = EspMqttClient::new(
         broker_url, 
         &mqtt_config,
-        |_|{}
+        move |_message_event|{}
     )?;
 
+    println!(">>> EspMqttClient instantiated <<<");
+
     // 2. publish an empty hello message
+    // let dummy = 0f32;
+    // let dummy_data = &dummy.to_be_bytes() as &[u8];
+    let empty_payload: &[u8] = &[];
     client.publish(
         hello_topic(UUID),
         QoS::AtLeastOnce,
         false,
-        Vec::new(),
+        empty_payload,
     )?;
+
+    println!(">>> Published hello topic <<<");
 
     loop {
         sleep(Duration::from_secs(1));
+        // temperature
         let temp = temp_sensor.read_owning_peripherals();
-        let temp_msg = temperature(temp);
+        let temperature_data = &temp.to_be_bytes() as &[u8];
         // 3. publish CPU temperature
         client.publish(
             temperature_data_topic(UUID),
             QoS::AtLeastOnce,
             false,
-            temp_msg.chars().map(|c|c as u8).collect::<Vec<u8>>(),
+            temperature_data,
         )?;
     }
-}
-
-fn templated(content: impl AsRef<str>) -> String {
-    format!(
-        r#"
-<!DOCTYPE html>
-<html>
-    <head>
-        <meta charset="utf-8">
-        <title>esp-rs web server</title>
-    </head>
-    <body>
-        {}
-    </body>
-</html>
-"#,
-        content.as_ref()
-    )
-}
-
-fn index_html() -> String {
-    templated("Hello from mcu!")
-}
-
-fn temperature(val: f32) -> String {
-    templated(format!("chip temperature: {:.2}°C", val))
 }
