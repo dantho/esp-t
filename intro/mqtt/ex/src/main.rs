@@ -6,7 +6,7 @@ use bsc::{
 use embedded_svc::mqtt::client::{
     Client,
     Details::{Complete, InitialChunk, SubsequentChunk},
-    Event::{self, Received},
+    Event::{self, Received, Published},
     Message, Publish, QoS,
 };
 use esp32_c3_dkc02_bsc as bsc;
@@ -17,15 +17,17 @@ use esp_idf_svc::{
 use std::{borrow::Cow, convert::TryFrom, thread::sleep, time::Duration};
 // If using the `binstart` feature of `esp-idf-sys`, always keep this module imported
 use esp_idf_sys as _;
-use log::{error, info};
+use log::{error, info, warn};
 
 // imported message topics
 use mqtt_messages::{
     hello_topic,
+    color_topic,
     temperature_data_topic,
     Command,
     RawCommandData,
     cmd_topic_fragment,
+    ColorData,
 };
 
 const UUID: &'static str = get_uuid::uuid();
@@ -82,26 +84,35 @@ fn main() -> anyhow::Result<()> {
 
     // Your Code:
     // 1. Create a client with default configuration and empty handler
+    // Part2: Modify to handle color topic subscription
     let mut client = EspMqttClient::new(
         broker_url, 
         &mqtt_config,
-        move |_message_event|{}
+        move |message_event| match message_event {
+            Ok(Received(msg)) => process_message(msg, &mut led),
+            Ok(Published(msg_id)) => (),
+            _ => warn!("Received from MQTT: {:?}", message_event),
+        }
     )?;
 
-    println!(">>> EspMqttClient instantiated <<<");
+    info!(">>> EspMqttClient instantiated <<<");
 
     // 2. publish an empty hello message
-    // let dummy = 0f32;
-    // let dummy_data = &dummy.to_be_bytes() as &[u8];
+    let publish_topic = hello_topic(UUID);
     let empty_payload: &[u8] = &[];
     client.publish(
-        hello_topic(UUID),
+        publish_topic,
         QoS::AtLeastOnce,
         false,
         empty_payload,
     )?;
 
-    println!(">>> Published hello topic <<<");
+    info!(">>> Published hello topic <<<");
+
+    let subscribe_topic = color_topic(UUID);
+    client.subscribe(subscribe_topic, QoS::AtLeastOnce);
+
+    info!(">>> Subscribed to color_topic <<<");
 
     loop {
         sleep(Duration::from_secs(1));
@@ -117,3 +128,22 @@ fn main() -> anyhow::Result<()> {
         )?;
     }
 }
+
+fn process_message(message: &EspMqttMessage, led: &mut WS2812RMT) {
+    match message.details() {
+        // all messages in this exercise will be of type `Complete`
+        // the other variants of the `Details` enum are for larger message payloads
+        Complete => {
+            // Cow<&[u8]> can be coerced into a slice &[u8] or a Vec<u8>
+            // You can coerce it into a slice to be sent to try_from()
+            let message_data: &[u8] = &message.data();
+            if let Ok(ColorData::BoardLed(color)) = ColorData::try_from(message_data) {
+                // set the LED to the newly received color
+                led.set_pixel(color);
+                info!("Setting LED to {:?}", color);
+            }
+        },
+        bad => warn!("Unexpected message type from MQTT: {:?}", bad),
+    }    
+}
+
