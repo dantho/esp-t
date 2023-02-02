@@ -34,9 +34,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     thread::spawn(move || {
         let mut rng = rand::thread_rng();
         loop {
-            let r = rng.gen();
-            let g = rng.gen();
-            let b = rng.gen();
+            let dimmer = 20;
+            let r: u8 = rng.gen::<u8>() / dimmer;
+            let g: u8 = rng.gen::<u8>() / dimmer;
+            let b: u8 = rng.gen::<u8>() / dimmer;
             let color = RGB8::new(r, g, b);
             println!("setting new color: {}", color);
             let color = ColorData::BoardLed(color);
