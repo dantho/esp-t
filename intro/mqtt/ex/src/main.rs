@@ -109,10 +109,10 @@ fn main() -> anyhow::Result<()> {
 
     info!(">>> Published hello topic <<<");
 
-    let subscribe_topic = color_topic(UUID);
-    client.subscribe(subscribe_topic, QoS::AtLeastOnce);
+    let empty_cmd = Command::BoardLed(RGB8::new(0,0,0));
+    client.subscribe(empty_cmd.topic(UUID), QoS::AtLeastOnce);
 
-    info!(">>> Subscribed to color_topic <<<");
+    info!(">>> Subscribed to all commands <<<");
 
     loop {
         sleep(Duration::from_secs(1));
@@ -136,11 +136,25 @@ fn process_message(message: &EspMqttMessage, led: &mut WS2812RMT) {
         Complete => {
             // Cow<&[u8]> can be coerced into a slice &[u8] or a Vec<u8>
             // You can coerce it into a slice to be sent to try_from()
-            let message_data: &[u8] = &message.data();
-            if let Ok(ColorData::BoardLed(color)) = ColorData::try_from(message_data) {
-                // set the LED to the newly received color
-                led.set_pixel(color);
-                info!("Setting LED to {:?}", color);
+            // RGB LED command
+            let is_command_topic = message.topic().unwrap().split("/").nth(1) == Some("command");
+            if is_command_topic {
+                let raw = RawCommandData {
+                    path: "",
+                    data: message.data(),
+                };
+                if let Ok(Command::BoardLed(color)) = Command::try_from(raw) {
+                    // set the LED to the newly received color
+                    led.set_pixel(color);
+                    info!("Setting LED to {:?}", color);
+                }
+            } else {
+                let message_data: &[u8] = &message.data();
+                if let Ok(ColorData::BoardLed(color)) = ColorData::try_from(message_data) {
+                    // set the LED to the newly received color
+                    led.set_pixel(color);
+                    info!("Setting LED to {:?}", color);
+                }
             }
         },
         bad => warn!("Unexpected message type from MQTT: {:?}", bad),
