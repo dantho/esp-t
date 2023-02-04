@@ -31,12 +31,21 @@ fn main() -> anyhow::Result<()>  {
     let mut sht = shtcx::shtc3(i2c);
 
     // Read and print the sensor's device ID, find the methods in the documentation.
-    let device_id = sht.device_identifier().unwrap;
+    let device_id = sht.device_identifier().unwrap();
     println!("SHTC3 T&H Device ID: {}", device_id);
 
     loop {
         // This loop initiates measurements, reads values and prints humidity in % and Temperature in °C.
-        sht.
+        sht.start_measurement(PowerMode::NormalMode).unwrap();
+        FreeRtos.delay_ms(100u32);
+        let measurement = sht.get_measurement_result().unwrap(); 
+        
+        println!(
+            "TEMP: {} °C\n
+            HUM: {:?} %\n
+            \n",
+            measurement.temperature.as_degrees_celsius(), measurement.humidity.as_percent(),
+        );
         FreeRtos.delay_ms(500u32);
     }
 }

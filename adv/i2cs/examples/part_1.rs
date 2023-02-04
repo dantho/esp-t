@@ -45,7 +45,6 @@ fn main() -> anyhow::Result<()>  {
         FreeRtos.delay_ms(100u32);
         let measurement = sht.get_measurement_result().unwrap(); 
         
-
         println!(
             "TEMP: {} °C\n
             HUM: {:?} %\n
