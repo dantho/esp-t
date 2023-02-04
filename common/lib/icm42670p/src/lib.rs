@@ -4,7 +4,7 @@
 use embedded_hal::blocking::i2c;
 
 /// ICM42670P device driver.
-/// Datasheet: https://3cfeqx1hf82y3xcoull08ihx-wpengine.netdna-ssl.com/wp-content/uploads/2021/07/DS-000451-ICM-42670-P-v1.0.pdf
+/// Datasheet: <https://3cfeqx1hf82y3xcoull08ihx-wpengine.netdna-ssl.com/wp-content/uploads/2021/07/DS-000451-ICM-42670-P-v1.0.pdf>
 /// 
 #[derive(Debug)]
 pub struct ICM42670P<I2C> {
