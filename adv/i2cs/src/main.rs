@@ -1,4 +1,6 @@
 use anyhow;
+#[allow(unused_imports)]
+use core::fmt::Write;
 use embedded_hal::blocking::delay::DelayMs;
 #[allow(unused_imports)]
 use esp_idf_hal::{
@@ -10,14 +12,12 @@ use esp_idf_hal::{
 };
 #[allow(unused_imports)]
 use esp_idf_sys::*;
-#[allow(unused_imports)]
-use shtcx; // driver for the Sensirion SHTCx T & H sensor series
 // use imc42670p; 
 #[allow(unused_imports)]
 use icm42670::{prelude::*, Address, Icm42670}; // driver for the ICM-42670 6-axis IMU from InvenSense
-
+use icm42670::accelerometer::vector::VectorExt;
 #[allow(unused_imports)]
-use core::fmt::Write;
+use shtcx; // driver for the Sensirion SHTCx T & H sensor series
 
 // // From icm42670 crate's example code, not training:
 // use esp32c3_hal::{
@@ -32,17 +32,18 @@ use core::fmt::Write;
 //     UsbSerialJtag,
 // };
 
-// goals of part 1:
-// instantiate i2c peripheral
-// implement one T&H sensor, print sensor values
-// goals of part 2:
-// implement IMU sensor on same bus to solve an ownership problem
-struct ImuCfg {
+struct ImuConfig {
     device_id: u8,
     power_mode: icm42670::PowerMode,
     gyro_range: icm42670::GyroRange,
     accel_range: icm42670::AccelRange,
 }
+
+// goals of part 1:
+// instantiate i2c peripheral
+// implement one T&H sensor, print sensor values
+// goals of part 2:
+// implement IMU sensor on same bus to solve an ownership problem
 fn main() -> anyhow::Result<()>  {
     let peripherals = Peripherals::take().unwrap();
 
@@ -76,7 +77,7 @@ fn main() -> anyhow::Result<()>  {
     imu.set_accel_range(icm42670::AccelRange::G16).unwrap();
     imu.set_gyro_range(icm42670::GyroRange::Deg2000).unwrap();
     // Read IMU Config
-    let imu_cfg = ImuCfg {
+    let imu_cfg = ImuConfig {
         device_id: imu.device_id().unwrap(),
         power_mode: imu.power_mode().unwrap(),
         gyro_range: imu.gyro_range().unwrap(),
@@ -95,13 +96,19 @@ fn main() -> anyhow::Result<()>  {
         FreeRtos.delay_ms(100u32);
         let th_meas = sht.get_measurement_result().unwrap(); 
 
-        let acc_meas = imu.accel_norm().unwrap();
+        let accel_meas = imu.accel_norm().unwrap();
+        let accel_mag = accel_meas.magnitude();
         let gyro_meas = imu.gyro_norm().unwrap();
 
         println!("TEMP: {:.2} °C", th_meas.temperature.as_degrees_celsius());
         println!("HUM: {:.2} %", th_meas.humidity.as_percent());
-        println!("ACC:  X: {:.3}, Y: {:.3}, Z: {:.3} g's", acc_meas.x, acc_meas.y, acc_meas.z);
-        println!("GYRO: X: {:.2}, Y: {:.2}, Z: {:.2} °/s ?", gyro_meas.x, gyro_meas.y, gyro_meas.z);
+        print!("ACC:  X: {:.2}, Y: {:.2}, Z: {:.2}", accel_meas.x, accel_meas.y, accel_meas.z);
+        if accel_mag < 0.95 || accel_mag > 1.05 {
+            println!(", Mag: {:.2} g's", accel_mag);
+        } else {
+            println!(" g's");
+        }
+        println!("GYRO: X: {:.2}, Y: {:.2}, Z: {:.2} °/s", gyro_meas.x, gyro_meas.y, gyro_meas.z);
         println!(" ");
 
         FreeRtos.delay_ms(500u32);
