@@ -72,10 +72,12 @@ fn main() -> anyhow::Result<()>  {
     // Create an instance of the IMU, find help via 'cargo doc --open'
     let mut imu = Icm42670::new(i2c_bus_seat2, Address::Primary).unwrap();
     imu.device_id().unwrap(); // Test bus config (ignore return value)
+
     // Set IMU Config
     imu.set_power_mode(icm42670::PowerMode::SixAxisLowNoise).unwrap();
     imu.set_accel_range(icm42670::AccelRange::G16).unwrap();
     imu.set_gyro_range(icm42670::GyroRange::Deg2000).unwrap();
+
     // Read IMU Config
     let imu_cfg = ImuConfig {
         device_id: imu.device_id().unwrap(),
@@ -83,6 +85,7 @@ fn main() -> anyhow::Result<()>  {
         gyro_range: imu.gyro_range().unwrap(),
         accel_range: imu.accel_range().unwrap(),    
     };
+
     // Print IMU Config
     println!("ICM42670 IMU:");
     println!("  {} (Device ID)", imu_cfg.device_id);
