@@ -75,10 +75,12 @@ fn main() -> anyhow::Result<()>  {
         let th_meas = sht.get_measurement_result().unwrap(); 
 
         let acc_meas = imu.accel_norm().unwrap();
+        let gyro_meas = imu.gyro_norm().unwrap();
 
         println!("TEMP: {:.2} °C", th_meas.temperature.as_degrees_celsius());
         println!("HUM: {:.2} %", th_meas.humidity.as_percent());
-        println!("X: {:.3}, Y: {:.3}, Z: {:.3} g's", acc_meas.x, acc_meas.y, acc_meas.z);
+        println!("ACC:  X: {:.3}, Y: {:.3}, Z: {:.3} g's", acc_meas.x, acc_meas.y, acc_meas.z);
+        println!("GYRO: X: {:.2}, Y: {:.2}, Z: {:.2} °/s ?", gyro_meas.x, gyro_meas.y, gyro_meas.z);
         println!(" ");
 
         FreeRtos.delay_ms(500u32);
