@@ -11,7 +11,7 @@ use esp_idf_hal::{
 #[allow(unused_imports)]
 use esp_idf_sys::*;
 #[allow(unused_imports)]
-use shtcx::{self, PowerMode}; // driver for the Sensirion SHTCx T & H sensor series
+use shtcx; // driver for the Sensirion SHTCx T & H sensor series
 // use imc42670p; 
 #[allow(unused_imports)]
 use icm42670::{prelude::*, Address, Icm42670}; // driver for the ICM-42670 6-axis IMU from InvenSense
@@ -37,7 +37,12 @@ use core::fmt::Write;
 // implement one T&H sensor, print sensor values
 // goals of part 2:
 // implement IMU sensor on same bus to solve an ownership problem
-
+struct ImuCfg {
+    device_id: u8,
+    power_mode: icm42670::PowerMode,
+    gyro_range: icm42670::GyroRange,
+    accel_range: icm42670::AccelRange,
+}
 fn main() -> anyhow::Result<()>  {
     let peripherals = Peripherals::take().unwrap();
 
@@ -60,17 +65,33 @@ fn main() -> anyhow::Result<()>  {
 
     // Create an instance of the SHTC3 sensor, find help in the documentation.
     let mut sht = shtcx::shtc3(i2c_bus_seat1);
-    let device_id = sht.device_identifier().unwrap();
-    println!("SHTC3 T&H Device ID: {}", device_id);
+    let sht_device_id = sht.device_identifier().unwrap();
+    println!("SHTC3 T&H Device ID: {}", sht_device_id);
 
     // Create an instance of the IMU, find help via 'cargo doc --open'
     let mut imu = Icm42670::new(i2c_bus_seat2, Address::Primary).unwrap();
-    let device_id = imu.device_id().unwrap();
-    println!("ICM42670 IMU Device ID: {}", device_id);
+    imu.device_id().unwrap(); // Test bus config (ignore return value)
+    // Set IMU Config
+    imu.set_power_mode(icm42670::PowerMode::SixAxisLowNoise).unwrap();
+    imu.set_accel_range(icm42670::AccelRange::G16).unwrap();
+    imu.set_gyro_range(icm42670::GyroRange::Deg2000).unwrap();
+    // Read IMU Config
+    let imu_cfg = ImuCfg {
+        device_id: imu.device_id().unwrap(),
+        power_mode: imu.power_mode().unwrap(),
+        gyro_range: imu.gyro_range().unwrap(),
+        accel_range: imu.accel_range().unwrap(),    
+    };
+    // Print IMU Config
+    println!("ICM42670 IMU:");
+    println!("  {} (Device ID)", imu_cfg.device_id);
+    println!("  {:?} (PowerMode)", imu_cfg.power_mode);
+    println!("  {:?} (GyroRange)", imu_cfg.gyro_range);
+    println!("  {:?} (AccelRange)", imu_cfg.accel_range);
 
     loop {
         // This loop initiates measurements, reads values and prints humidity in % and Temperature in °C.
-        sht.start_measurement(PowerMode::NormalMode).unwrap();
+        sht.start_measurement(shtcx::PowerMode::NormalMode).unwrap();
         FreeRtos.delay_ms(100u32);
         let th_meas = sht.get_measurement_result().unwrap(); 
 
