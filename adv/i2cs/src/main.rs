@@ -88,10 +88,10 @@ fn main() -> anyhow::Result<()>  {
 
     // Print IMU Config
     println!("ICM42670 IMU:");
-    println!("  {} (Device ID)", imu_cfg.device_id);
-    println!("  {:?} (PowerMode)", imu_cfg.power_mode);
-    println!("  {:?} (GyroRange)", imu_cfg.gyro_range);
-    println!("  {:?} (AccelRange)", imu_cfg.accel_range);
+    println!("   Device ID: {}  ", imu_cfg.device_id);
+    println!("   PowerMode: {:?}", imu_cfg.power_mode);
+    println!("   GyroRange: {:?}", imu_cfg.gyro_range);
+    println!("  AccelRange: {:?}", imu_cfg.accel_range);
 
     loop {
         // This loop initiates measurements, reads values and prints humidity in % and Temperature in °C.
