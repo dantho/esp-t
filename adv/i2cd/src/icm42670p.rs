@@ -1,7 +1,7 @@
 #![deny(unsafe_code)]
-
 use embedded_hal::blocking::i2c;
-use core::marker::PhantomData;
+// use core::marker::PhantomData;
+use micromath::vector::{F32x3, I16x3};
 
 /// ICM42670P device driver, represented by a struct with 2 fields.
 /// Datasheet: ..\..\datasheets\DS-000451-ICM-42670-P-v1.0.pdf
@@ -44,6 +44,42 @@ where
         self.read_register(Register::WhoAmI)
     }
 
+    pub fn read_accel_range(&mut self) -> Result<f32, E> {
+        // reads the Device ID register
+        match self.read_register(Register::AccelConfig0)? & 0b110000 {
+            0b000000 => Ok(16.0),
+            0b010000 => Ok(8.0),
+            0b100000 => Ok(4.0),
+            0b110000 => Ok(2.0),
+            _ => Ok(-999.9), // Don't know how to throw the error :(
+        }
+    }
+
+    pub fn read_accel(&mut self) -> Result<F32x3, E> {
+        let x = i16::from_le_bytes([
+            self.read_register(Register::AccelDataX0)?,
+            self.read_register(Register::AccelDataX1)?,
+        ]);
+        let y = i16::from_le_bytes([
+            self.read_register(Register::AccelDataY0)?,
+            self.read_register(Register::AccelDataY1)?,
+        ]);
+        let z = i16::from_le_bytes([
+            self.read_register(Register::AccelDataZ0)?,
+            self.read_register(Register::AccelDataZ1)?,
+        ]);
+        let xyz = I16x3::new(x,y,z);
+        let xyz = F32x3::from(xyz);
+        
+        let range = self.read_accel_range()?; // g's
+        let xyz = F32x3::new(
+            xyz.x * range / i16::MAX as f32,
+            xyz.y * range / i16::MAX as f32,
+            xyz.z * range / i16::MAX as f32,
+        );
+        Ok(xyz)
+    }
+
     /// Writes into a register
     // This method is not public as it is only needed inside this file.
     #[allow(unused)]
@@ -74,6 +110,7 @@ where
 pub enum Register {
     MclkRdy = 0x00,
     WhoAmI = 0x75,
+    AccelConfig0 = 0x21,
     IntConfig = 0x06,
     TempData1 = 0x09,
     TempData0 = 0x0A,

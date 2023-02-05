@@ -6,6 +6,8 @@ use esp_idf_hal::{
     peripherals::Peripherals,
     prelude::*,
 };
+use micromath::vector::VectorExt;
+
 // use esp_idf_sys::*;
 
 // uncomment the following line to run the solution, check lib.rs for further instructions
@@ -32,6 +34,9 @@ fn main() -> anyhow::Result<()> {
     println!("Sensor init");
     let device_id = sensor.read_device_id_register()?;
     println!("Hello, world, I am sensor {} (0x{:02x})", device_id, device_id);
+    let accel = sensor.read_accel()?;
+    // dbg!(accel);
+    println!("And I am detecting {:.3} g's of acceleration.", accel.magnitude());
     assert_eq!(device_id, 103_u8);
 
     loop {
