@@ -38,7 +38,6 @@ fn main() -> anyhow::Result<()> {
     unsafe {
         // Writes the button configuration to the registers
         esp!(gpio_config(&io_conf))?;
-
         
         // Installs the generic GPIO interrupt handler
         esp!(gpio_install_isr_service(ESP_INTR_FLAG_IRAM as i32))?;

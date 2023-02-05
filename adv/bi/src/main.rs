@@ -28,15 +28,22 @@ fn main() -> anyhow::Result<()> {
     // let io_conf = gpio_config_t {
     //     ...
     // };
-
+    let io_conf: gpio_config_t = gpio_config_t {
+        pin_bit_mask: 1<<GPIO_NUM,
+        mode: gpio_mode_t_GPIO_MODE_INPUT,
+        pull_up_en: true as u32,
+        pull_down_en: false as u32,
+        intr_type: gpio_int_type_t_GPIO_INTR_POSEDGE,
+    };
     unsafe {
 
         // 2. write the GPIO configuration into the register
         // esp!(...)?;
-
+        esp!(gpio_config(&io_conf))?;
 
         // 3. Install the global GPIO interrupt handler
         // esp!(...)?;
+        esp!(gpio_install_isr_service(ESP_INTR_FLAG_IRAM as i32))?;
 
         // Queue configurations
         const QUEUE_TYPE_BASE: u8 = 0;
@@ -45,10 +52,15 @@ fn main() -> anyhow::Result<()> {
 
         // 5. Create an event queue
         // EVENT_QUEUE = Some(...);
-        
-        
+        EVENT_QUEUE = Some(xQueueGenericCreate(QUEUE_SIZE, ITEM_SIZE, QUEUE_TYPE_BASE));
+                
         // 7. Add the button GPIO and the function to the interrupt handler
         // esp!(...)?;
+        esp!(gpio_isr_handler_add(
+            GPIO_NUM,
+            Some(button_interrupt),
+            std::ptr::null_mut()
+        ))?;
     }
 
     // The loop in main waits until it gets a message through the rx ("receiver") part of the channel
@@ -59,9 +71,15 @@ fn main() -> anyhow::Result<()> {
 
             // 8. Receive the event from the queue.
             // let res = ...;
-            
+            let res = xQueueReceive(EVENT_QUEUE.unwrap(), ptr::null_mut(), QUEUE_WAIT_TICKS);
+
             // 9. Handle the value of res.
             // ...
+            // If the event has the value 0, nothing happens. if it has a different value, the button was pressed. 
+            match res {
+                1 => println!("Button pressed!"),
+                _ => {},
+            };
         }
     }
 }
