@@ -62,6 +62,8 @@ fn main() -> anyhow::Result<()> {
             std::ptr::null_mut()
         ))?;
     }
+    let mut led = bsc::led::WS2812RMT::new()?;
+    led.set_pixel(RGB8::new(0,0,0))?;
 
     // The loop in main waits until it gets a message through the rx ("receiver") part of the channel
     loop {
@@ -77,7 +79,16 @@ fn main() -> anyhow::Result<()> {
             // ...
             // If the event has the value 0, nothing happens. if it has a different value, the button was pressed. 
             match res {
-                1 => println!("Button pressed!"),
+                1 => {
+                    let dimmer = 15;
+                    let rgb = RGB8::new(
+                        (esp_random() & 0xFF) as u8 / dimmer,
+                        (esp_random() & 0xFF) as u8 / dimmer,
+                        (esp_random() & 0xFF) as u8 / dimmer,
+                    );
+                    led.set_pixel(rgb)?;
+                    println!("LED color is {:?}", rgb);
+                },
                 _ => {},
             };
         }
