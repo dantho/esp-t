@@ -14,8 +14,11 @@ use esp_idf_hal::{
 use esp_idf_sys::*;
 // use imc42670p; 
 #[allow(unused_imports)]
-use icm42670::{prelude::*, Address, Icm42670}; // driver for the ICM-42670 6-axis IMU from InvenSense
-use icm42670::accelerometer::vector::VectorExt;
+use icm42670::{
+    prelude::*,
+    Address,
+    Icm42670,
+    accelerometer::vector::VectorExt}; // driver for the ICM-42670 6-axis IMU from InvenSense
 #[allow(unused_imports)]
 use shtcx; // driver for the Sensirion SHTCx T & H sensor series
 
