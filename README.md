@@ -1,4 +1,8 @@
 # Embedded Rust Trainings for Espressif
+Run code modules with
+```
+cargo espflash --target riscv32imc-esp-espidf --monitor COM3
+```
 
 This repository contains Training Material for learning to use Embedded Rust
 with the Espressif ESP32-C3.
