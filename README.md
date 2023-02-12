@@ -1,7 +1,7 @@
 # Embedded Rust Trainings for Espressif
 
-This repository contains Training Material for learning to use Embedded Rust
-with the Espressif ESP32-C3.
+This repository contains *<<Dan's completed>>* Training Material for learning to use Embedded Rust
+with the Espressif ESP32-C3. [Original materials are here.](https://github.com/ferrous-systems/espressif-trainings.git) The remainder of this readme is unmodified from the original training material:
 
 We suggest you start by [reading the book](https://espressif-trainings.ferrous-systems.com).
 
